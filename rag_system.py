@@ -5,21 +5,50 @@ import chromadb
 from chromadb.utils import embedding_functions
 import fitz
 
-# Load environment variables
-load_dotenv()
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+# Load environment variables (override=True means .env file takes precedence)
+load_dotenv(override=True)
 
-# Initialize OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Check if OpenAI API key is set and non-default
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+USE_OPENAI = OPENAI_API_KEY and OPENAI_API_KEY != 'default' and len(OPENAI_API_KEY) > 10
+
+# Ollama configuration
+OLLAMA_HOST = os.getenv('OLLAMA_HOST', '')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')
+
+# Initialize client based on configuration
+if USE_OPENAI:
+    print("Using OpenAI API")
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    MODEL_NAME = "gpt-4o-mini"
+else:
+    if not OLLAMA_HOST:
+        raise ValueError(
+            "OLLAMA_HOST is not set in environment variables. "
+            "Please set OLLAMA_HOST in your .env file (e.g., OLLAMA_HOST=http://10.0.0.60:11434) "
+            "or set OPENAI_API_KEY to use OpenAI instead."
+        )
+    print(f"Using Ollama at {OLLAMA_HOST}")
+    client = OpenAI(
+        base_url=f"{OLLAMA_HOST}/v1",
+        api_key="ollama"  # Ollama doesn't require a real API key
+    )
+    MODEL_NAME = OLLAMA_MODEL
 
 # Initialize ChromaDB
 chroma_client = chromadb.Client()
 
-# Initialize embedding function
-embedding_function = embedding_functions.OpenAIEmbeddingFunction(
-    api_key=OPENAI_API_KEY,
-    model_name="text-embedding-3-small"
-)
+# Initialize embedding function based on configuration
+if USE_OPENAI:
+    embedding_function = embedding_functions.OpenAIEmbeddingFunction(
+        api_key=OPENAI_API_KEY,
+        model_name="text-embedding-3-small"
+    )
+else:
+    # Using a simple sentence transformer for Ollama
+    embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
+        model_name="all-MiniLM-L6-v2"
+    )
 
 def get_or_create_collection():
     collection_name = "eu_ai_act"
@@ -75,7 +104,7 @@ def generate_answer(query, return_sources=False):
         relevant_texts = results['documents'][0]
         context = "\n".join(relevant_texts)
         
-        # Generate response using OpenAI
+        # Generate response using configured model
         messages = [
             {"role": "system", "content": """You are an AI assistant specialized in the EU AI Act. 
              Provide accurate, clear, and concise answers based on the provided context. 
@@ -84,7 +113,7 @@ def generate_answer(query, return_sources=False):
         ]
         
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=MODEL_NAME,
             messages=messages,
             temperature=0.7
         )

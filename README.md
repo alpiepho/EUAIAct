@@ -1,11 +1,12 @@
 # EU AI Act Chat Assistant
 
-This project provides an interactive Streamlit-based chat assistant designed to answer questions about the EU AI Act. It leverages a retrieval-augmented generation (RAG) system to fetch and present relevant information from the EU AI Act documents, using OpenAI and ChromaDB for document embedding and search functionalities.
+This project provides an interactive Streamlit-based chat assistant designed to answer questions about the EU AI Act. It leverages a retrieval-augmented generation (RAG) system to fetch and present relevant information from the EU AI Act documents, supporting both OpenAI and local Ollama models for flexibility.
 
 ![EU AI Act Chat Assistant](assets/euaiact-rag-chat.png)
 
 ## Features
 - **Interactive Chat Interface**: Users can ask questions about the EU AI Act and receive real-time answers from the assistant.
+- **Flexible Model Support**: Use either OpenAI's models or a local Ollama instance based on your configuration.
 - **Reference Retrieval**: Provides references to relevant sections of the EU AI Act document in response to user queries.
 - **Clear Chat History**: Users can reset their chat history at any time.
 - **Sample Questions**: The sidebar includes sample questions for quick reference.
@@ -24,7 +25,8 @@ This project provides an interactive Streamlit-based chat assistant designed to 
 
 ### Requirements
 - Python 3.7+
-- OpenAI API key stored in a `.env` file as `OPENAI_API_KEY`
+- **Optional**: OpenAI API key for using OpenAI models
+- **Optional**: Ollama instance for using local models (defaults to Ollama if no OpenAI key is provided)
 
 ### Setting Up the Virtual Environment
 
@@ -60,11 +62,38 @@ source env/bin/activate
 pip install -r requirements.txt
 ```
 
-> Ensure that the OpenAI API key is set up in the `.env` file:
->
-> ```plaintext
-> OPENAI_API_KEY=your_openai_api_key_here
-> ```
+### Configuration
+
+Create a `.env` file based on `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+#### Option 1: Using OpenAI
+If you have an OpenAI API key, set it in your `.env` file:
+```plaintext
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+#### Option 2: Using Ollama (Default)
+If you don't set an OpenAI API key (or set it to 'default'), the app will automatically use Ollama. Configure your Ollama settings in `.env`:
+```plaintext
+# Leave OPENAI_API_KEY unset or commented out to use Ollama
+# OPENAI_API_KEY=
+
+# Ollama host (default: http://10.0.0.60:11434)
+OLLAMA_HOST=http://10.0.0.60:11434
+
+# Ollama model (default: llama3.2)
+# Options: llama3.2, mistral, qwen2.5, etc.
+OLLAMA_MODEL=llama3.2
+```
+
+**Note**: Make sure your Ollama instance has the model pulled:
+```bash
+ollama pull llama3.2
+```
 
 ---
 
@@ -90,8 +119,9 @@ pip install -r requirements.txt
 - **Sidebar**: Contains options to clear chat history, view example questions, and reference current documents.
 
 ### RAG System (`rag_system.py`)
-- **Document Embedding and Search**: The EU AI Act document is embedded and stored in ChromaDB. The system retrieves relevant sections when a query is made.
-- **Answer Generation**: Constructs a response based on relevant document excerpts and the question, using the OpenAI API.
+- **Automatic Model Selection**: Automatically uses OpenAI if an API key is configured, otherwise defaults to Ollama.
+- **Document Embedding and Search**: The EU AI Act document is embedded and stored in ChromaDB. Uses OpenAI embeddings when using OpenAI, or local sentence-transformer embeddings when using Ollama.
+- **Answer Generation**: Constructs a response based on relevant document excerpts and the question, using either OpenAI API or Ollama.
 
 ---
 
@@ -106,7 +136,10 @@ pip install -r requirements.txt
 ## Notes
 
 - Ensure you have the `EU_AI_Act.pdf` document in the project directory for document embedding.
-- This project uses the `gpt-4o-mini` model for faster responses. Ensure the model is specified correctly in the OpenAI API setup.
+- The app will automatically detect which backend to use based on your `.env` configuration.
+- **OpenAI Mode**: Uses `gpt-4o-mini` model and OpenAI embeddings for optimal performance.
+- **Ollama Mode**: Uses local models (default: `llama3.2`) and local sentence-transformer embeddings, providing privacy and no API costs.
+- You can switch between OpenAI and Ollama by simply updating your `.env` file and restarting the app.
 
 ---
 
