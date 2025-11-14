@@ -1,3 +1,7 @@
+import os
+# Set tokenizers parallelism before any other imports to avoid fork warning
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import streamlit as st
 from rag_system import generate_answer
 

@@ -14,6 +14,9 @@ USE_OPENAI = OPENAI_API_KEY and OPENAI_API_KEY != 'default' and len(OPENAI_API_K
 
 # Ollama configuration
 OLLAMA_HOST = os.getenv('OLLAMA_HOST', '')
+# Ensure OLLAMA_HOST has a protocol
+if OLLAMA_HOST and not OLLAMA_HOST.startswith(('http://', 'https://')):
+    OLLAMA_HOST = f"http://{OLLAMA_HOST}"
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')
 
 # Initialize client based on configuration
@@ -34,6 +37,21 @@ else:
         api_key="ollama"  # Ollama doesn't require a real API key
     )
     MODEL_NAME = OLLAMA_MODEL
+    
+    # Test Ollama connection and verify model availability
+    try:
+        import urllib.request
+        import json
+        with urllib.request.urlopen(f"{OLLAMA_HOST}/api/tags") as response:
+            data = json.loads(response.read().decode())
+            models = data.get('models', [])
+            model_names = [m['name'] for m in models]
+            if any(OLLAMA_MODEL in name for name in model_names):
+                print(f"✓ Ollama connection successful - model '{OLLAMA_MODEL}' is available")
+            else:
+                print(f"⚠ Warning: Model '{OLLAMA_MODEL}' not found. Available models: {', '.join(model_names)}")
+    except Exception as e:
+        print(f"⚠ Warning: Could not connect to Ollama - {str(e)}")
 
 # Initialize ChromaDB
 chroma_client = chromadb.Client()
