@@ -95,6 +95,25 @@ OLLAMA_MODEL=llama3.2
 ollama pull llama3.2
 ```
 
+#### Option 3: Using a Custom PDF Document
+The app can work with any PDF document, not just the EU AI Act. The UI will dynamically adapt to your document:
+
+```plaintext
+# Set the PDF filename in your .env file
+PDF_FILENAME=YourDocument.pdf
+```
+
+**Features when using a custom PDF:**
+- **Dynamic Title**: The app title automatically updates based on your PDF filename
+- **AI-Generated Questions**: Example questions are generated from your document's actual content
+- **Context-Aware UI**: All UI elements (descriptions, placeholders, etc.) adapt to your document
+- **Document Overview**: Automatically generated summary from your PDF content
+
+Simply place your PDF in the project root directory and set the `PDF_FILENAME` variable. The app will automatically:
+1. Extract and embed the PDF content
+2. Generate relevant example questions using AI
+3. Adapt all UI text to match your document's context
+
 ---
 
 ## How to Run the Project
@@ -115,31 +134,40 @@ ollama pull llama3.2
 
 ### Chat Interface (`streamlit_app.py`)
 - **Main Interface**: Displays the title and a brief prompt for users to ask questions.
+- **Dynamic UI Generation**: Automatically adapts all UI elements based on the configured PDF document.
 - **Message History**: Shows previous messages from the user and assistant, storing chat history in session state.
 - **Sidebar**: Contains options to clear chat history, view example questions, and reference current documents.
 
 ### RAG System (`rag_system.py`)
 - **Automatic Model Selection**: Automatically uses OpenAI if an API key is configured, otherwise defaults to Ollama.
-- **Document Embedding and Search**: The EU AI Act document is embedded and stored in ChromaDB. Uses OpenAI embeddings when using OpenAI, or local sentence-transformer embeddings when using Ollama.
+- **Document Embedding and Search**: The configured PDF document is embedded and stored in ChromaDB. Uses OpenAI embeddings when using OpenAI, or local sentence-transformer embeddings when using Ollama.
 - **Answer Generation**: Constructs a response based on relevant document excerpts and the question, using either OpenAI API or Ollama.
+- **Dynamic Content Generation**: Uses AI to generate contextually relevant example questions and UI content based on your PDF.
 
 ---
 
 ## Example Usage
 
 1. Launch the app with `streamlit run streamlit_app.py`.
-2. Ask questions like “What is the EU AI Act?” or “What are high-risk AI systems?”
-3. The assistant responds, providing references to specific parts of the EU AI Act.
+2. Ask questions like "What is the EU AI Act?" or "What are high-risk AI systems?"
+3. The assistant responds, providing references to specific parts of the document.
+
+**Using a Custom Document:**
+1. Place your PDF in the project directory (e.g., `CompanyPolicy.pdf`)
+2. Set `PDF_FILENAME=CompanyPolicy.pdf` in your `.env` file
+3. Run the app - it will automatically adapt all UI elements to your document
+4. The AI will generate relevant example questions based on your document's content
 
 ---
 
 ## Notes
 
-- Ensure you have the `EU_AI_Act.pdf` document in the project directory for document embedding.
+- Ensure you have your PDF document in the project directory for document embedding (default: `EU_AI_Act.pdf`).
 - The app will automatically detect which backend to use based on your `.env` configuration.
 - **OpenAI Mode**: Uses `gpt-4o-mini` model and OpenAI embeddings for optimal performance.
 - **Ollama Mode**: Uses local models (default: `llama3.2`) and local sentence-transformer embeddings, providing privacy and no API costs.
-- You can switch between OpenAI and Ollama by simply updating your `.env` file and restarting the app.
+- **Custom PDF**: The UI dynamically adapts to any PDF you configure, including AI-generated example questions.
+- You can switch between OpenAI and Ollama, or change the PDF document, by updating your `.env` file and restarting the app.
 
 ---
 

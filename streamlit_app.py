@@ -3,7 +3,7 @@ import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import streamlit as st
-from rag_system import generate_answer
+from rag_system import generate_answer, generate_ui_content
 
 # Initialize chat history and document states
 if "messages" not in st.session_state:
@@ -11,9 +11,16 @@ if "messages" not in st.session_state:
 if "current_references" not in st.session_state:
     st.session_state.current_references = []
 
+# Generate dynamic UI content based on the PDF
+if "ui_content" not in st.session_state:
+    with st.spinner("Initializing..."):
+        st.session_state.ui_content = generate_ui_content()
+
+ui = st.session_state.ui_content
+
 # Main chat interface
-st.title("EU AI Act Chat Assistant")
-st.write("Ask any question about the EU AI Act, and chat with the AI assistant!")
+st.title(ui["title"])
+st.write(ui["subtitle"])
 
 # Display chat messages from history
 for message in st.session_state.messages:
@@ -21,7 +28,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # Accept user input
-if prompt := st.chat_input("What would you like to know about the EU AI Act?"):
+if prompt := st.chat_input(ui["chat_placeholder"]):
     with st.chat_message("user"):
         st.markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -29,7 +36,7 @@ if prompt := st.chat_input("What would you like to know about the EU AI Act?"):
     try:
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                response, references = generate_answer(prompt, return_sources=True)  # Modified to return references
+                response, references = generate_answer(prompt, return_sources=True)
                 st.markdown(response.content)
                 st.session_state.messages.append({"role": "assistant", "content": response.content})
                 # Update current references
@@ -47,7 +54,7 @@ with st.sidebar:
 
     st.markdown("""
     ### About
-    This is an AI assistant specialized in answering questions about the EU AI Act.
+    """ + ui["about_text"] + """
     
     ### Tips
     - Ask specific questions
@@ -57,13 +64,7 @@ with st.sidebar:
 
     # Example Questions with clickable functionality
     st.markdown("### Example Questions")
-    example_questions = [
-        "What is the EU AI Act?",
-        "What are high-risk AI systems?",
-        "What are the transparency requirements?",
-        "What are the penalties for non-compliance?"
-    ]
-    for question in example_questions:
+    for question in ui["example_questions"]:
         if st.button(question):
             # Simulate clicking the question
             st.session_state.messages.append({"role": "user", "content": question})
@@ -83,20 +84,15 @@ with st.sidebar:
                 st.markdown(f"```\n{ref}\n```")
                 st.markdown("---")
                 if hasattr(ref, 'metadata'):
-                    st.markdown(f"**Source**: {ref.metadata.get('source', 'EU AI Act')}")
+                    st.markdown(f"**Source**: {ref.metadata.get('source', ui['pdf_filename'])}")
                     st.markdown(f"**Section**: {ref.metadata.get('section', 'N/A')}")
     else:
-        st.info("Ask a question to see relevant references from the EU AI Act")
+        st.info(ui["references_info"])
 
     # Document Overview
     st.markdown("### Document Overview")
-    with st.expander("📚 Available Documents"):
-        st.markdown("""
-        - **EU AI Act** (Primary Document)
-            - Full legislative text
-            - Latest version: 2023
-        - **Supporting Materials**
-            - Implementation guidelines
-            - Technical specifications
-            - Compliance checklists
+    with st.expander("📚 Document Information"):
+        st.markdown(f"""
+        - **{ui['doc_name']}** (Primary Document)
+            - {ui['doc_overview']}
         """)

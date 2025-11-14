@@ -19,6 +19,9 @@ if OLLAMA_HOST and not OLLAMA_HOST.startswith(('http://', 'https://')):
     OLLAMA_HOST = f"http://{OLLAMA_HOST}"
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')
 
+# PDF configuration
+PDF_FILENAME = os.getenv('PDF_FILENAME', 'EU_AI_Act.pdf')
+
 # Initialize client based on configuration
 if USE_OPENAI:
     print("Using OpenAI API")
@@ -85,14 +88,14 @@ def get_or_create_collection():
         
         # Load PDF and add to collection
         try:
-            doc = fitz.open("EU_AI_Act.pdf")
+            doc = fitz.open(PDF_FILENAME)
             for i, page in enumerate(doc):
                 text = page.get_text()
                 if text.strip():  # Only add non-empty pages
                     collection.add(
                         documents=[text],
                         ids=[f"page_{i}"],
-                        metadatas=[{"page": i, "source": "EU_AI_Act.pdf"}]
+                        metadatas=[{"page": i, "source": PDF_FILENAME}]
                     )
         except Exception as e:
             print(f"Error loading PDF: {e}")
@@ -148,6 +151,74 @@ def format_source_reference(text):
     """Format the source text for display"""
     # You can add additional formatting logic here
     return text.strip()
+
+def generate_ui_content():
+    """
+    Generate dynamic UI content based on the PDF filename and document content.
+    Returns a dictionary with all UI strings for the Streamlit app.
+    """
+    # Extract document name from filename
+    doc_name = PDF_FILENAME.replace('.pdf', '').replace('_', ' ').replace('-', ' ')
+    
+    # Try to generate context-aware content using RAG
+    try:
+        collection = get_or_create_collection()
+        
+        # Query for document overview
+        overview_results = collection.query(
+            query_texts=["What is this document about? Main topics and purpose."],
+            n_results=2
+        )
+        # overview_results['documents'][0] is a list of strings (one per result)
+        # Join them and then take first 50 words
+        overview_full_text = " ".join(overview_results['documents'][0])
+        overview_words = overview_full_text.split()[:50]
+        overview_text = " ".join(overview_words) + "..."
+        
+        # Generate example questions using AI
+        context = "\n".join(overview_results['documents'][0])
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant that generates relevant questions about documents."},
+            {"role": "user", "content": f"Based on this document content:\n{context[:1500]}\n\nGenerate 4 specific, diverse example questions that users might ask. Return ONLY the questions, one per line, without numbers or bullets."}
+        ]
+        
+        completion = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+            temperature=0.7,
+            max_tokens=200
+        )
+        
+        generated_questions = [q.strip() for q in completion.choices[0].message.content.strip().split('\n') if q.strip()]
+        example_questions = generated_questions[:4] if len(generated_questions) >= 4 else [
+            f"What is the main purpose of {doc_name}?",
+            f"What are the key topics covered in {doc_name}?",
+            f"What are the main requirements in {doc_name}?",
+            f"Who does {doc_name} apply to?"
+        ]
+        
+    except Exception as e:
+        print(f"Could not generate dynamic content: {e}")
+        # Fallback to generic content
+        overview_text = f"This document contains information about {doc_name}."
+        example_questions = [
+            f"What is {doc_name}?",
+            f"What are the key topics in {doc_name}?",
+            f"What are the main requirements?",
+            f"Who does this apply to?"
+        ]
+    
+    return {
+        "title": f"{doc_name} Chat Assistant",
+        "subtitle": f"Ask any question about {doc_name}, and chat with the AI assistant!",
+        "chat_placeholder": f"What would you like to know about {doc_name}?",
+        "about_text": f"This is an AI assistant specialized in answering questions about {doc_name}.",
+        "example_questions": example_questions,
+        "references_info": f"Ask a question to see relevant references from {doc_name}",
+        "doc_name": doc_name,
+        "doc_overview": overview_text,
+        "pdf_filename": PDF_FILENAME
+    }
 
 if __name__ == "__main__":
     # Test the system
