@@ -84,15 +84,16 @@ with st.sidebar:
                 st.markdown(f"```\n{ref}\n```")
                 st.markdown("---")
                 if hasattr(ref, 'metadata'):
-                    st.markdown(f"**Source**: {ref.metadata.get('source', ui['pdf_filename'])}")
+                    st.markdown(f"**Source**: {ref.metadata.get('source', ui['source_display'])}")
                     st.markdown(f"**Section**: {ref.metadata.get('section', 'N/A')}")
     else:
         st.info(ui["references_info"])
 
     # Document Overview
     st.markdown("### Document Overview")
-    with st.expander("📚 Document Information"):
+    with st.expander(f"📚 {ui['source_type'].title()} Information"):
         st.markdown(f"""
-        - **{ui['doc_name']}** (Primary Document)
+        - **{ui['doc_name']}** (Primary {ui['source_type'].title()})
             - {ui['doc_overview']}
+            - Source: `{ui['source_display']}`
         """)
